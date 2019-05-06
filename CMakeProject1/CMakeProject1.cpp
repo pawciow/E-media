@@ -1,7 +1,8 @@
-﻿#include "CMakeProject1.h"
+﻿//#include "CMakeProject1.h"
 #include <fstream>
-#include <string>
+#include <string.h>
 #include <iostream>
+#include <limits>
 
 using namespace std;
 
@@ -37,9 +38,9 @@ namespace jpg_headers
 	        TIFF_header Tiff;
 	        struct TIFF_Tags
             {
-	            // TODO: this
-            };
 
+            };
+		TIFF_Tags Tiff_tags;
 
 
 	    };
@@ -114,10 +115,11 @@ namespace jpg_headers
         os << "\n" << "TIFF version: 0x";
         for(int i = 0; i < 2;i++)
             os << std::hex << (int)soi.jfif1_header.Tiff.TIFF_version[i];
+	 os << "\n" << "OFFSET: 0x";
+	for(int i = 0; i < 4;i++)
+            os << std::hex << (int)soi.jfif1_header.Tiff.OFFSET_IFD[i];
 
-
-
-
+	
         os << "\n\n";
 
 		return os;
@@ -127,6 +129,8 @@ namespace jpg_headers
 	{
 		SOI_HEADER header;
 		fs.read((char*)&header, sizeof(SOI_HEADER));
+				
+			
 
 		for (int i = 0; i < sizeof(SOI_HEADER); i++)
 		{
@@ -135,18 +139,96 @@ namespace jpg_headers
 
 		return header;
 	}
+
 }
+
+
 
 struct jpgImage
 {
+	char * image;
+	int size;
 	jpg_headers::SOI_HEADER rawHeader;
 	// jpgThumbnail thumbnail; // Temporaily cxommented as no miniature is attached to the first file
+
+	jpgImage(const char * fileName)
+	{
+		streampos sizes;
+	  	ifstream file (fileName, ios::in|ios::binary|ios::ate);
+		if (file.is_open())
+		  {
+		    sizes = file.tellg();
+		    image = new char[size];
+
+		    file.seekg (0, ios::beg);
+		    file.read (image, size);
+		    file.close();
+		    size = (int) sizes;
+		    cout << "Sizes:" << dec << sizes << endl;
+		    cout << hex << (int)(*(unsigned char*) &image[1]) << endl;
+		    cout << "the entire file content is in memory" << endl;
+		   }
+		else cout << "Unable to open file";
+	}
+
+	int findSOS()
+	{
+		int i = 0;
+		while(i<size-1)
+		{
+			if((int)(*(unsigned char*)&image[i]) == 0xff)
+			{
+				if((int)(*(unsigned char*)&image[i+1]) == 0xda)
+				{
+					return i;
+				} 
+			}
+		i++;
+		}
+		return 0;
+	}
+
+	void xorEncrypt(const char *key)
+	{
+	        int length = strlen(key);
+	        int znak, xorChar;
+	        int mod = 0;
+	 		int i = this->findSOS();
+	 		i = i+2;
+	        do
+	        {
+	            if (mod >= length) mod=0;
+	            znak = image[i];
+	            xorChar = znak^key[mod];
+	            mod++;
+	            image[i] = xorChar;
+	            i++;
+
+	        }
+	        while (i < size - 2);
+	}
+
+	void saveToFile(const char* fileName)
+	{
+		ofstream fileToSave;
+	    fileToSave.open(fileName);
+		cout << "Size:" << dec << size << endl;
+	      for(int i = 0; i<size; i++)
+	      {
+	      			
+	      		cout << "i:" << dec << i << endl;
+	             fileToSave <<  image[i];
+	      }
+	    fileToSave.close();
+	}
+
+
 };
 
-const char* fileName = R"(C:/Users/Pawel/source/repos/CMakeProject1/robot_opiekunczy.jpg)";
-
+const char* fileName = "robot_opiekunczy.jpg";
 int main()
 {
+	
 	fstream imageFile;
 	imageFile.open(fileName, std::ios_base::binary | std::ios_base::in);
 	if (!imageFile)
@@ -154,9 +236,12 @@ int main()
 		return 0;
 	}
 	auto header = jpg_headers::readJpgHeader(imageFile);
-
 	cout << header << endl;
-	int a; cin >> a;
+	imageFile.close();
+	
+	jpgImage img = jpgImage(fileName);
+	img.saveToFile("test.jpg");
+
 	return 0;
 }
 
