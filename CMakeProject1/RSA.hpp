@@ -35,7 +35,7 @@ template <typename  T> class RSA
 {
 public:
     RSA() = delete;
-    RSA(T numberToFind, std::vector<char>  Message) : _message{Message}
+    RSA(T numberToFind, std::string  Message) : _message{Message}
     {
         Erastotenes(numberToFind);
         p = *(primeNumbers.end() - 1);
@@ -56,7 +56,7 @@ private:
     std::vector<T> primeNumbers;
 
     /*Helpers in encryption*/
-    std::vector<char>  _message;
+   std::string  _message;
     T p, q;
     T _totient;
 

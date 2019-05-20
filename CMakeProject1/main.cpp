@@ -3,7 +3,8 @@
 #include "RSA.hpp"
 int main()
 {
-    std::vector<char > d {'d','u','p','a'};
+//    std::vector<char > d {'d','u','p','a'};
+    std::string d = "Zakodowana wiadomość";
     RSA<long int> a(450, d);
 
     auto b = a.Encrypt();
